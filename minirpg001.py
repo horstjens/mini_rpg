@@ -188,7 +188,81 @@ class Fragment(pygame.sprite.Sprite):
             self.pos[1] += self.dy * seconds
             self.rect.centerx = round(self.pos[0],0)
             self.rect.centery = round(self.pos[1],0)
+       
+class EvilSnowman (pygame.sprite.Sprite):
+    """an evil snowman turret"""
+    def __init__(self):
+        self._layer = 8
+        pygame.sprite.Sprite.__init__(self, self.groups)
+        self.x = random.randint(0,PygView.width)
+        self.y = random.randint(0,PygView.height)
+        self.color = (200,20,200)
+        self.image = pygame.Surface((30,60))
+        pygame.draw.circle(self.image, self.color, (15,20), 7)
+        pygame.draw.circle(self.image, self.color, (15,40), 15)
+        self.image.set_colorkey((0,0,0)) # black transparent
+        self.image = self.image.convert_alpha()
+        self.rect = self.image.get_rect()
+        self.rect.center = (self.x, self.y)        
+        
+        
+        
+    def update(self, seconds):
+        pass
+             
+        
+ 
+                   
             
+class Bullet(pygame.sprite.Sprite):
+    """A projectile"""
+    def __init__(self, x,y ,direction):
+        self._layer = 9
+        pygame.sprite.Sprite.__init__(self, self.groups)
+        
+        self.direction = direction
+        self.speed = 10 + random.random() *100
+        self.x = x
+        self.y = y
+        self.lifetime = 0.0
+        self.maxtime = 6.0
+        if self.direction == "up":
+            self.dx=0
+            self.dy=-self.speed
+        
+        if self.direction == "down":
+            self.dx=0
+            self.dy=self.speed
+
+        if self.direction == "left":
+            self.dx=-self.speed
+            self.dy=0
+   
+        if self.direction == "right":
+            self.dx=self.speed
+            self.dy=0
+        
+        self.color=(random.randint(0,255),random.randint(0,255),random.randint(0,255))
+        self.lifetime = random.random() * 6
+        self.image = pygame.Surface((10,10))
+        self.image.set_colorkey((0,0,0)) # black transparent
+        pygame.draw.circle(self.image, self.color, (5,5), 3)
+        self.image = self.image.convert_alpha()
+        self.rect = self.image.get_rect()
+        self.rect.center = (self.x, self.y)
+            
+    def update(self, seconds):
+        self.lifetime += seconds
+        
+        self.x += self.dx * seconds
+        self.y += self.dy * seconds
+        
+        self.rect.center = (self.x, self.y)
+        if self.lifetime > self.maxtime:
+            self.kill()
+            
+            
+
 class Ball(object):
     """this is not a native pygame sprite but instead a pygame surface made by dirk ketturkat"""
     def __init__(self, radius = 50, color=(0,0,255), x=320, y=240):
@@ -233,6 +307,7 @@ class FlyingObject(pygame.sprite.Sprite):
             self.oldx = 0
             self.oldy = 0
             self.automove = ""
+            self.direction = "right"
             self.gridmaxx=gridmaxx
             self.gridmaxy=gridmaxy
             self.grid=grid
@@ -469,6 +544,8 @@ class PygView(object):
         pygame.display.set_caption("Press ESC to quit")
         self.width = width
         self.height = height
+        PygView.width = width
+        PygView.height = height
         self.grid = 50
         self.gridmaxx=13
         self.gridmaxy=8
@@ -501,10 +578,14 @@ class PygView(object):
         #bulletgroup = pygame.sprite.Group()
         self.fragmentgroup = pygame.sprite.Group()
         self.gravitygroup = pygame.sprite.Group()
+        self.bulletgroup = pygame.sprite.Group()
+        self.snowmangroup = pygame.sprite.Group()
         # only the allgroup draws the sprite, so i use LayeredUpdates() instead Group()
         self.allgroup = pygame.sprite.LayeredUpdates() # more sophisticated, can draw sprites in layers 
         FlyingObject.groups=self.allgroup
+        EvilSnowman.groups=self.allgroup,self.snowmangroup
         Fragment.groups=self.allgroup,self.fragmentgroup
+        Bullet.groups=self.allgroup,self.bulletgroup
 
         #-------------loading files from data subdirectory -------------------------------
         try: # load images into classes (class variable !). if not possible, draw ugly images
@@ -569,18 +650,21 @@ class PygView(object):
                         running = False
                     #  0 key (resets movement)
                     if event.key == pygame.K_UP:
+                        self.ferris.direction = "up"
                         if self.tilecheck(int(self.ferris.x),int(self.ferris.y)-self.grid):
                         #if self.tiles[(int(self.ferris.x), int(self.ferris.y)-self.grid)]:
                             self.ferris.up()
                             self.silas.x=self.ferris.oldx
                             self.silas.y=self.ferris.oldy
                     if event.key == pygame.K_DOWN:
+                        self.ferris.direction = "down"
                         if self.tilecheck(int(self.ferris.x), int(self.ferris.y)+self.grid):
                         #if self.tiles[(int(self.ferris.x), int(self.ferris.y)+self.grid)]:
                             self.ferris.down()
                             self.silas.x=self.ferris.oldx
                             self.silas.y=self.ferris.oldy
                     if event.key == pygame.K_LEFT:
+                        self.ferris.direction = "left"
                         if self.tilecheck(int(self.ferris.x)-self.grid, int(self.ferris.y)):
                         #if self.tiles[(int(self.ferris.x)-self.grid, int(self.ferris.y))]:
                             #print(self.ferris.x)
@@ -598,6 +682,7 @@ class PygView(object):
                             #    self.paint()
                             #    self.ferris.x = self.width        
                     if event.key == pygame.K_RIGHT:
+                        self.ferris.direction = "right"
                         #print(self.ferris.x, self.ferris.y, self.tiles.keys())
                         # tile right of ferris is allowed? 
                         
@@ -634,11 +719,16 @@ class PygView(object):
                         self.silas.ddx=0
                         self.silas.ddy=0    
                     # Teleportation                    
-                    elif event.key == pygame.K_f:
+                    if event.key == pygame.K_f:
                         self.silas.x=(random.randint(0,640))
                         self.silas.y=(random.randint(0,640)) 
                     elif event.key == pygame.K_g:
-                        Fragment(self.silas.x,self.silas.y)         
+                        Fragment(self.silas.x,self.silas.y)
+                    elif event.key == pygame.K_v:
+                        EvilSnowman()    
+                    #bullet
+                    if event.key == pygame.K_SPACE:
+                        Bullet(self.ferris.x,self.ferris.y,self.ferris.direction)             
             keys=pygame.key.get_pressed()
             #if keys[pygame.K_a]:
             #    self.silas.dx -= 1
