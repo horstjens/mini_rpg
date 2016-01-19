@@ -29,6 +29,19 @@ import math
 
 GRAD = math.pi / 180 # 2 * pi / 360   # math module needs Radiant instead of Grad 
 
+def radians_to_degrees(radians):
+    return(radians / math.pi) * 180.0
+
+def degrees_to_radians(degrees):
+    return degrees * (math.pi / 180.0)    
+
+def showkeys():
+    lines = ["Movement = cursor keys",
+             "v = Spawn snowman turret",
+             "space = shoot"]
+    return lines
+    
+
 def write(msg="paolo is cool", color=(0,0,0)):
         """write text into pygame surfaces"""
         myfont = pygame.font.SysFont("None", 32)
@@ -208,7 +221,8 @@ class EvilSnowman (pygame.sprite.Sprite):
         
         
     def update(self, seconds):
-        pass
+        if random.random()< 0.01:
+            Bullet(self.x,self.y,"1") #0 silas #1 ferris
              
         
  
@@ -226,22 +240,35 @@ class Bullet(pygame.sprite.Sprite):
         self.y = y
         self.lifetime = 0.0
         self.maxtime = 6.0
+        self.target = False
         if self.direction == "up":
             self.dx=0
             self.dy=-self.speed
         
-        if self.direction == "down":
+        elif self.direction == "down":
             self.dx=0
             self.dy=self.speed
 
-        if self.direction == "left":
+        elif self.direction == "left":
             self.dx=-self.speed
             self.dy=0
    
-        if self.direction == "right":
+        elif self.direction == "right":
             self.dx=self.speed
             self.dy=0
-        
+        else:
+            self.targetnr = int(direction)
+            #self.dx=random.random()*self.speed
+            #self.dy=random.random()*self.speed
+            self.target = FlyingObject.objects[self.targetnr] 
+            self.ix = self.target.x - self.x
+            self.iy = self.target.y - self.y
+            self.angle = radians_to_degrees(math.atan2(self.iy, -self.ix))+90
+            self.ddx = - math.sin(self.angle * GRAD)
+            self.ddy = - math.cos(self.angle * GRAD)
+            self.dx = self.ddx * self.speed
+            self.dy = self.ddy * self.speed
+            
         self.color=(random.randint(0,255),random.randint(0,255),random.randint(0,255))
         self.lifetime = random.random() * 6
         self.image = pygame.Surface((10,10))
@@ -252,7 +279,7 @@ class Bullet(pygame.sprite.Sprite):
         self.rect.center = (self.x, self.y)
             
     def update(self, seconds):
-        self.lifetime += seconds
+        self.lifetime += seconds                                                                                                                                                                      # doppelpunkt de
         
         self.x += self.dx * seconds
         self.y += self.dy * seconds
@@ -781,4 +808,7 @@ class PygView(object):
 if __name__ == '__main__':
 
     # call with width of window and fps
+    for line in showkeys():
+        print(line)
+    i=raw_input("press enter")
     PygView().run()
