@@ -656,14 +656,14 @@ class PygView(object):
                             self.ferris.up()
                             self.silas.x=self.ferris.oldx
                             self.silas.y=self.ferris.oldy
-                    if event.key == pygame.K_DOWN:
+                    elif event.key == pygame.K_DOWN:
                         self.ferris.direction = "down"
                         if self.tilecheck(int(self.ferris.x), int(self.ferris.y)+self.grid):
                         #if self.tiles[(int(self.ferris.x), int(self.ferris.y)+self.grid)]:
                             self.ferris.down()
                             self.silas.x=self.ferris.oldx
                             self.silas.y=self.ferris.oldy
-                    if event.key == pygame.K_LEFT:
+                    elif event.key == pygame.K_LEFT:
                         self.ferris.direction = "left"
                         if self.tilecheck(int(self.ferris.x)-self.grid, int(self.ferris.y)):
                         #if self.tiles[(int(self.ferris.x)-self.grid, int(self.ferris.y))]:
@@ -681,7 +681,7 @@ class PygView(object):
                             #    self.background = self.bg1
                             #    self.paint()
                             #    self.ferris.x = self.width        
-                    if event.key == pygame.K_RIGHT:
+                    elif event.key == pygame.K_RIGHT:
                         self.ferris.direction = "right"
                         #print(self.ferris.x, self.ferris.y, self.tiles.keys())
                         # tile right of ferris is allowed? 
