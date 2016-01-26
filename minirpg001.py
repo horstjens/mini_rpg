@@ -127,13 +127,12 @@ class Text(pygame.sprite.Sprite):
             self.rect = self.image.get_rect()
             
 class Lifebar(pygame.sprite.Sprite):
-        """shows a bar with the hitpoints of a sprite by dirk ketturkat
-           with a given bossnumber, the Lifebar class can 
+        """shows a bar with the hitpoints of a sprite with a given bossnumber, the Lifebar class can 
            identify the BOSS (FLYING OBJECT sprite) with this codeline:
            FlyingObject.objects[bossnumber] """
            
         def __init__(self, boss):
-            self.groups = PygView.allgroup
+            #self.groups = PygView.allgroup
             self.boss = boss
             self._layer = self.boss._layer
             pygame.sprite.Sprite.__init__(self, self.groups)
@@ -207,6 +206,8 @@ class EvilSnowman (pygame.sprite.Sprite):
     def __init__(self):
         self._layer = 8
         pygame.sprite.Sprite.__init__(self, self.groups)
+        self.hitpoints = 120.0
+        self.hitpointsfull = 120.0
         self.x = random.randint(0,PygView.width)
         self.y = random.randint(0,PygView.height)
         self.color = (200,20,200)
@@ -216,19 +217,22 @@ class EvilSnowman (pygame.sprite.Sprite):
         self.image.set_colorkey((0,0,0)) # black transparent
         self.image = self.image.convert_alpha()
         self.rect = self.image.get_rect()
-        self.rect.center = (self.x, self.y)        
+        self.rect.center = (self.x, self.y)
+        Lifebar(self)        
         
         
         
     def update(self, seconds):
         if random.random()< 0.01:
-            Bullet(self.x,self.y,"1") #0 silas #1 ferris
+            Bullet(self,"1") #0 silas #1 ferris
              
 class EvilDoge (pygame.sprite.Sprite):
     """an evil doge which follows you"""
     def __init__(self):
         self._layer = 8
         pygame.sprite.Sprite.__init__(self, self.groups)
+        self.hitpoints = 10.0
+        self.hitpointsfull = random.randint(100.0,150.0)
         self.x = random.randint(0,PygView.width)
         self.y = random.randint(0,PygView.height)
         self.color = (40,151,64)
@@ -243,7 +247,8 @@ class EvilDoge (pygame.sprite.Sprite):
         self.sniffrange = 100
         self.dx = 0
         self.dy = 0
-        self.speed = 40        
+        self.speed = 40
+        Lifebar(self)        
         
         
         
@@ -254,7 +259,7 @@ class EvilDoge (pygame.sprite.Sprite):
         dist = (distx**2+disty**2)**0.5
         if dist < self.sniffrange:
             if random.random()< 0.01:
-                Bullet(self.x,self.y,"1") #0 silas #1 ferris
+                Bullet(self,"1") #0 silas #1 ferris
             if self.x > PygView.ferris.x:
                 self.dx = -self.speed
             elif self.x < PygView.ferris.x:
@@ -266,7 +271,9 @@ class EvilDoge (pygame.sprite.Sprite):
         else:
             #random movement
             self.dx = random.choice((-1,0,1))*self.speed
-            self.dy = random.choice((-1,0,1))*self.speed                 
+            self.dy = random.choice((-1,0,1))*self.speed
+            if self.hitpoints < self.hitpointsfull:
+                self.hitpoints += 0.1                 
         self.x += self.dx * seconds
         self.y += self.dy * seconds
         
@@ -279,14 +286,15 @@ class EvilDoge (pygame.sprite.Sprite):
             
 class Bullet(pygame.sprite.Sprite):
     """A projectile"""
-    def __init__(self, x,y ,direction):
+    def __init__(self, boss ,direction):
         self._layer = 9
         pygame.sprite.Sprite.__init__(self, self.groups)
         
         self.direction = direction
         self.speed = 10 + random.random() *100
-        self.x = x
-        self.y = y
+        self.boss = boss
+        self.x = self.boss.x
+        self.y = self.boss.y
         self.lifetime = 0.0
         self.maxtime = 6.0
         self.target = False
@@ -373,6 +381,8 @@ class FlyingObject(pygame.sprite.Sprite):
             pygame.sprite.Sprite.__init__(self,  self.groups  ) #call parent class. NEVER FORGET !
             #self.area = PygView.screen.get_rect()
             self.area = area
+            self.hitpoints = 200.0
+            self.hitpointsfull = 200.0
             self.rotatespeed = 10.0
             self.speed = 70.0
             self.x= 0
@@ -657,13 +667,17 @@ class PygView(object):
         self.bulletgroup = pygame.sprite.Group()
         self.snowmangroup = pygame.sprite.Group()
         self.dogegroup = pygame.sprite.Group()
+        self.bargroup = pygame.sprite.Group()
+        self.enemygroup = pygame.sprite.Group()
+        self.playergroup = pygame.sprite.Group()
         # only the allgroup draws the sprite, so i use LayeredUpdates() instead Group()
         self.allgroup = pygame.sprite.LayeredUpdates() # more sophisticated, can draw sprites in layers 
-        FlyingObject.groups=self.allgroup
-        EvilSnowman.groups=self.allgroup,self.snowmangroup
-        EvilDoge.groups=self.allgroup,self.dogegroup
+        FlyingObject.groups=self.allgroup,self.playergroup
+        EvilSnowman.groups=self.allgroup,self.snowmangroup,self.enemygroup
+        EvilDoge.groups=self.allgroup,self.dogegroup,self.enemygroup
         Fragment.groups=self.allgroup,self.fragmentgroup
         Bullet.groups=self.allgroup,self.bulletgroup
+        Lifebar.groups=self.allgroup,self.bargroup
 
         #-------------loading files from data subdirectory -------------------------------
         try: # load images into classes (class variable !). if not possible, draw ugly images
@@ -676,9 +690,10 @@ class PygView(object):
             print("therfore drawing incredibly ugly sprites instead")
         self.silas=FlyingObject(self.screen.get_rect(),imagenr=1)
         PygView.ferris=FlyingObject(self.screen.get_rect(),imagenr=0)
-        self.ketturkat=FlyingObject(self.screen.get_rect(),imagenr=0,ai=1)
-        self.ketturkat.x=425
-        self.ketturkat.y=225
+        Lifebar(PygView.ferris)
+        #self.ketturkat=FlyingObject(self.screen.get_rect(),imagenr=0,ai=1)
+        #self.ketturkat.x=425
+        #self.ketturkat.y=225
         self.background=self.bg1
 
     def paint(self):
@@ -808,7 +823,7 @@ class PygView(object):
                         EvilDoge()        
                     #bullet
                     if event.key == pygame.K_SPACE:
-                        Bullet(PygView.ferris.x,PygView.ferris.y,PygView.ferris.direction)             
+                        Bullet(PygView.ferris,PygView.ferris.direction)             
             keys=pygame.key.get_pressed()
             #if keys[pygame.K_a]:
             #    self.silas.dx -= 1
@@ -833,7 +848,27 @@ class PygView(object):
             self.playtime += milliseconds / 1000.0
             #self.draw_text("FPS: {:6.3}{}PLAYTIME: {:6.3} SECONDS".format(
             #               self.clock.get_fps(), " "*5, self.playtime))
-             # ----------- clear, draw , update, flip -----------------  
+            # ----------- clear, draw , update, flip -----------------  
+            #------------collision detection--------------------------
+            for p in self.playergroup:
+                crashgroup = pygame.sprite.spritecollide(p, self.bulletgroup, False, pygame.sprite.collide_rect)
+                for bu in crashgroup:
+                    if bu.boss == p:
+                        continue
+                    p.hitpoints-=7
+                    bu.kill()
+                    
+            for e in self.enemygroup:
+                crashgroup = pygame.sprite.spritecollide(e, self.bulletgroup, False, pygame.sprite.collide_rect)
+                for e in crashgroup:
+                    if e.boss == p:
+                        continue
+                    p.hitpoints-=7
+                    e.kill()
+                
+            
+            
+            
              
             # ferrris screenwechsel
             if self.background == self.bg1 and PygView.ferris.x > self.width * 0.9 and PygView.ferris.dx > 0:
@@ -845,7 +880,11 @@ class PygView(object):
                 self.background = self.bg1
                 self.paint()
                 PygView.ferris.x =  self.width // self.grid * self.grid - self.grid//2
-            self.allgroup.clear(self.screen, self.background)
+           
+           
+           
+           
+            #self.allgroup.clear(self.screen, self.background)
             self.allgroup.update(seconds)
             self.allgroup.draw(self.screen) 
             pygame.display.flip()
