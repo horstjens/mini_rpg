@@ -224,7 +224,56 @@ class EvilSnowman (pygame.sprite.Sprite):
         if random.random()< 0.01:
             Bullet(self.x,self.y,"1") #0 silas #1 ferris
              
+class EvilDoge (pygame.sprite.Sprite):
+    """an evil doge which follows you"""
+    def __init__(self):
+        self._layer = 8
+        pygame.sprite.Sprite.__init__(self, self.groups)
+        self.x = random.randint(0,PygView.width)
+        self.y = random.randint(0,PygView.height)
+        self.color = (40,151,64)
+        self.image = pygame.Surface((30,60))
+        pygame.draw.circle(self.image, self.color, (15,20), 7)
+        pygame.draw.circle(self.image, self.color, (15,40), 15)
+        pygame.draw.circle(self.image, self.color, (15,60), 22)
+        self.image.set_colorkey((0,0,0)) # black transparent
+        self.image = self.image.convert_alpha()
+        self.rect = self.image.get_rect()
+        self.rect.center = (self.x, self.y)
+        self.sniffrange = 100
+        self.dx = 0
+        self.dy = 0
+        self.speed = 100        
         
+        
+        
+    def update(self, seconds):
+        #distance to player
+        distx=self.x - PygView.ferris.x
+        disty=self.y - PygView.ferris.y
+        dist = (distx**2+disty**2)**0.5
+        if dist < self.sniffrange:
+            if random.random()< 0.01:
+                Bullet(self.x,self.y,"1") #0 silas #1 ferris
+            if self.x > PygView.ferris.x:
+                self.dx = -self.speed
+            elif self.x < PygView.ferris.x:
+                self.dx = self.speed
+            if self.y > PygView.ferris.y:
+                self.dy = -self.speed
+            elif self.y < PygView.ferris.y:
+                self.dy = self.speed
+        else:
+            #random movement
+            self.dx = random.choice((-1,0,1))*self.speed
+            self.dy = random.choice((-1,0,1))*self.speed                 
+        self.x += self.dx * seconds
+        self.y += self.dy * seconds
+        
+        self.rect.center = (self.x, self.y)
+                
+            
+                    
  
                    
             
@@ -607,10 +656,12 @@ class PygView(object):
         self.gravitygroup = pygame.sprite.Group()
         self.bulletgroup = pygame.sprite.Group()
         self.snowmangroup = pygame.sprite.Group()
+        self.dogegroup = pygame.sprite.Group()
         # only the allgroup draws the sprite, so i use LayeredUpdates() instead Group()
         self.allgroup = pygame.sprite.LayeredUpdates() # more sophisticated, can draw sprites in layers 
         FlyingObject.groups=self.allgroup
         EvilSnowman.groups=self.allgroup,self.snowmangroup
+        EvilDoge.groups=self.allgroup,self.dogegroup
         Fragment.groups=self.allgroup,self.fragmentgroup
         Bullet.groups=self.allgroup,self.bulletgroup
 
@@ -624,7 +675,7 @@ class PygView(object):
             print("no image files 'babytux.png' and 'babytux_neg.png' in subfolder %s" % folder)
             print("therfore drawing incredibly ugly sprites instead")
         self.silas=FlyingObject(self.screen.get_rect(),imagenr=1)
-        self.ferris=FlyingObject(self.screen.get_rect(),imagenr=0)
+        PygView.ferris=FlyingObject(self.screen.get_rect(),imagenr=0)
         self.ketturkat=FlyingObject(self.screen.get_rect(),imagenr=0,ai=1)
         self.ketturkat.x=425
         self.ketturkat.y=225
@@ -663,8 +714,8 @@ class PygView(object):
         """
         self.paint() 
         running = True
-        self.ferris.x=self.grid//2
-        self.ferris.y=self.grid//2
+        PygView.ferris.x=self.grid//2
+        PygView.ferris.y=self.grid//2
         self.silas.x=self.grid*self.gridmaxx-self.grid//2
         self.silas.y=self.grid*self.gridmaxy-self.grid//2
         while running:
@@ -677,61 +728,61 @@ class PygView(object):
                         running = False
                     #  0 key (resets movement)
                     if event.key == pygame.K_UP:
-                        self.ferris.direction = "up"
-                        if self.tilecheck(int(self.ferris.x),int(self.ferris.y)-self.grid):
-                        #if self.tiles[(int(self.ferris.x), int(self.ferris.y)-self.grid)]:
-                            self.ferris.up()
-                            self.silas.x=self.ferris.oldx
-                            self.silas.y=self.ferris.oldy
+                        PygView.ferris.direction = "up"
+                        if self.tilecheck(int(PygView.ferris.x),int(PygView.ferris.y)-self.grid):
+                        #if self.tiles[(int(PygView.ferris.x), int(PygView.ferris.y)-self.grid)]:
+                            PygView.ferris.up()
+                            self.silas.x=PygView.ferris.oldx
+                            self.silas.y=PygView.ferris.oldy
                     elif event.key == pygame.K_DOWN:
-                        self.ferris.direction = "down"
-                        if self.tilecheck(int(self.ferris.x), int(self.ferris.y)+self.grid):
-                        #if self.tiles[(int(self.ferris.x), int(self.ferris.y)+self.grid)]:
-                            self.ferris.down()
-                            self.silas.x=self.ferris.oldx
-                            self.silas.y=self.ferris.oldy
+                        PygView.ferris.direction = "down"
+                        if self.tilecheck(int(PygView.ferris.x), int(PygView.ferris.y)+self.grid):
+                        #if self.tiles[(int(PygView.ferris.x), int(PygView.ferris.y)+self.grid)]:
+                            PygView.ferris.down()
+                            self.silas.x=PygView.ferris.oldx
+                            self.silas.y=PygView.ferris.oldy
                     elif event.key == pygame.K_LEFT:
-                        self.ferris.direction = "left"
-                        if self.tilecheck(int(self.ferris.x)-self.grid, int(self.ferris.y)):
-                        #if self.tiles[(int(self.ferris.x)-self.grid, int(self.ferris.y))]:
-                            #print(self.ferris.x)
-                            if self.background == self.bg2 and (self.ferris.x - self.grid ) <= self.grid//2:
+                        PygView.ferris.direction = "left"
+                        if self.tilecheck(int(PygView.ferris.x)-self.grid, int(PygView.ferris.y)):
+                        #if self.tiles[(int(PygView.ferris.x)-self.grid, int(PygView.ferris.y))]:
+                            #print(PygView.ferris.x)
+                            if self.background == self.bg2 and (PygView.ferris.x - self.grid ) <= self.grid//2:
                                 self.background = self.bg1
                                 self.paint()
-                                self.ferris.x = self.grid * self.gridmaxx - self.grid//2       
+                                PygView.ferris.x = self.grid * self.gridmaxx - self.grid//2       
                             else:
-                                self.ferris.left()
-                                self.silas.x=self.ferris.oldx
-                                self.silas.y=self.ferris.oldy
-                            #if self.background == self.bg2 and self.ferris.x < self.width * 0.01:
-                            #if self.background == self.bg2 and self.ferris.x < 0:
+                                PygView.ferris.left()
+                                self.silas.x=PygView.ferris.oldx
+                                self.silas.y=PygView.ferris.oldy
+                            #if self.background == self.bg2 and PygView.ferris.x < self.width * 0.01:
+                            #if self.background == self.bg2 and PygView.ferris.x < 0:
                             #    self.background = self.bg1
                             #    self.paint()
-                            #    self.ferris.x = self.width        
+                            #    PygView.ferris.x = self.width        
                     elif event.key == pygame.K_RIGHT:
-                        self.ferris.direction = "right"
-                        #print(self.ferris.x, self.ferris.y, self.tiles.keys())
+                        PygView.ferris.direction = "right"
+                        #print(PygView.ferris.x, PygView.ferris.y, self.tiles.keys())
                         # tile right of ferris is allowed? 
                         
-                        if self.tilecheck(int(self.ferris.x)+self.grid, int(self.ferris.y)):
-                        #if self.tiles[(int(self.ferris.x)+self.grid, int(self.ferris.y))]:
-                            if self.background == self.bg1 and self.ferris.x + self.grid >= self.grid * self.gridmaxx - self.grid//2:
+                        if self.tilecheck(int(PygView.ferris.x)+self.grid, int(PygView.ferris.y)):
+                        #if self.tiles[(int(PygView.ferris.x)+self.grid, int(PygView.ferris.y))]:
+                            if self.background == self.bg1 and PygView.ferris.x + self.grid >= self.grid * self.gridmaxx - self.grid//2:
                                 self.background = self.bg2
                                 self.paint()
-                                self.ferris.x = 0
+                                PygView.ferris.x = 0
                             
                             else:
-                                self.ferris.right()
-                                self.silas.x=self.ferris.oldx
-                                self.silas.y=self.ferris.oldy
-                          #  if self.background == self.bg1 and self.ferris.x > self.width * 0.99:
-                          #  if self.background == self.bg1 and self.ferris.x >self.width:
+                                PygView.ferris.right()
+                                self.silas.x=PygView.ferris.oldx
+                                self.silas.y=PygView.ferris.oldy
+                          #  if self.background == self.bg1 and PygView.ferris.x > self.width * 0.99:
+                          #  if self.background == self.bg1 and PygView.ferris.x >self.width:
                                 
                     #if event.key == pygame.K_0:
-                    #    self.ferris.dx=0
-                    #    self.ferris.dy=0    
-                    #    self.ferris.ddx=0
-                    #    self.ferris.ddy=0    
+                    #    PygView.ferris.dx=0
+                    #    PygView.ferris.dy=0    
+                    #    PygView.ferris.ddx=0
+                    #    PygView.ferris.ddy=0    
                     if event.key == pygame.K_i:
                         self.silas.up()
                     if event.key == pygame.K_k:
@@ -752,10 +803,12 @@ class PygView(object):
                     elif event.key == pygame.K_g:
                         Fragment(self.silas.x,self.silas.y)
                     elif event.key == pygame.K_v:
-                        EvilSnowman()    
+                        EvilSnowman()
+                    elif event.key == pygame.K_b:
+                        EvilDoge()        
                     #bullet
                     if event.key == pygame.K_SPACE:
-                        Bullet(self.ferris.x,self.ferris.y,self.ferris.direction)             
+                        Bullet(PygView.ferris.x,PygView.ferris.y,PygView.ferris.direction)             
             keys=pygame.key.get_pressed()
             #if keys[pygame.K_a]:
             #    self.silas.dx -= 1
@@ -766,13 +819,13 @@ class PygView(object):
             #if keys[pygame.K_s]:
             #    self.silas.dy += 1                   
             #if keys[pygame.K_KP4]:
-            #    self.ferris.dx -= 1
+            #    PygView.ferris.dx -= 1
             #if keys[pygame.K_KP6]:
-            #    self.ferris.dx += 1                   
+            #    PygView.ferris.dx += 1                   
             #if keys[pygame.K_KP8]:
-            #    self.ferris.dy -= 1
+            #    PygView.ferris.dy -= 1
             #if keys[pygame.K_KP2]:
-            #    self.ferris.dy += 1 
+            #    PygView.ferris.dy += 1 
             
             milliseconds = self.clock.tick(self.fps)
             seconds = milliseconds / 1000.0 # seconds passed since last frame
@@ -783,15 +836,15 @@ class PygView(object):
              # ----------- clear, draw , update, flip -----------------  
              
             # ferrris screenwechsel
-            if self.background == self.bg1 and self.ferris.x > self.width * 0.9 and self.ferris.dx > 0:
+            if self.background == self.bg1 and PygView.ferris.x > self.width * 0.9 and PygView.ferris.dx > 0:
                 self.background = self.bg2
                 self.paint()
-                self.ferris.x = self.grid // 2
+                PygView.ferris.x = self.grid // 2
                 
-            if self.background == self.bg2 and self.ferris.x < self.width * 0.1 and self.ferris.dx < 0:
+            if self.background == self.bg2 and PygView.ferris.x < self.width * 0.1 and PygView.ferris.dx < 0:
                 self.background = self.bg1
                 self.paint()
-                self.ferris.x =  self.width // self.grid * self.grid - self.grid//2
+                PygView.ferris.x =  self.width // self.grid * self.grid - self.grid//2
             self.allgroup.clear(self.screen, self.background)
             self.allgroup.update(seconds)
             self.allgroup.draw(self.screen) 
