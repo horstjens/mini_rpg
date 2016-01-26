@@ -243,7 +243,7 @@ class EvilDoge (pygame.sprite.Sprite):
         self.sniffrange = 100
         self.dx = 0
         self.dy = 0
-        self.speed = 100        
+        self.speed = 40        
         
         
         
