@@ -26,6 +26,7 @@ import pygame
 import os
 import random
 import math
+import sys
 
 GRAD = math.pi / 180 # 2 * pi / 360   # math module needs Radiant instead of Grad 
 
@@ -200,6 +201,63 @@ class Fragment(pygame.sprite.Sprite):
             self.pos[1] += self.dy * seconds
             self.rect.centerx = round(self.pos[0],0)
             self.rect.centery = round(self.pos[1],0)
+
+class Doenertier (pygame.sprite.Sprite):
+    """A yummy animal made out of pure döner and extra spicy, juicy chicken meat"""
+    def __init__(self):
+        self._layer = 8
+        pygame.sprite.Sprite.__init__(self, self.groups)
+        self.hitpoints = 50.0
+        self.hitpointsfull = 50
+        self.x = random.randint(0,PygView.width)
+        self.y = random.randint(0,PygView.height)
+        self.color = (52,100,81)
+        self.image = pygame.Surface((30,60))
+        pygame.draw.circle(self.image, self.color, (15,20), 7)
+        pygame.draw.circle(self.image, self.color, (15,60), 22)
+        self.image.set_colorkey((0,0,0)) # black transparent
+        self.image = self.image.convert_alpha()
+        self.rect = self.image.get_rect()
+        self.rect.center = (self.x, self.y)
+        self.sniffrange = 80
+        self.dx = 0
+        self.dy = 0
+        self.speed = 27
+        Lifebar(self)        
+        
+        
+        
+    def update(self, seconds):
+        #distance to player
+        distx=self.x - PygView.ferris.x
+        disty=self.y - PygView.ferris.y
+        dist = (distx**2+disty**2)**0.5
+        if dist < self.sniffrange:
+            if self.x > PygView.ferris.x:
+                self.dx = self.speed
+            elif self.x < PygView.ferris.x:
+                self.dx = -self.speed
+            if self.y > PygView.ferris.y:
+                self.dy = self.speed
+            elif self.y < PygView.ferris.y:
+                self.dy = -self.speed
+        else:
+            #random movement
+            self.dx = random.choice((-1,0,1))*self.speed
+            self.dy = random.choice((-1,0,1))*self.speed
+            if self.hitpoints < self.hitpointsfull:
+                self.hitpoints += 0.0                 
+        self.x += self.dx * seconds
+        self.y += self.dy * seconds
+        
+        self.rect.center = (self.x, self.y)
+        if self.hitpoints <1:
+            self.kill()
+        if self.x <0 or self.y<0 or self.x > PygView.width or self.y > PygView.height:
+            self.hitpoints = 0
+            self.kill()        
+
+
        
 class EvilSnowman (pygame.sprite.Sprite):
     """an evil snowman turret"""
@@ -225,6 +283,8 @@ class EvilSnowman (pygame.sprite.Sprite):
     def update(self, seconds):
         if random.random()< 0.01:
             Bullet(self,"1") #0 silas #1 ferris
+        if self.hitpoints <1:
+            self.kill()    
              
 class EvilDoge (pygame.sprite.Sprite):
     """an evil doge which follows you"""
@@ -258,7 +318,7 @@ class EvilDoge (pygame.sprite.Sprite):
         disty=self.y - PygView.ferris.y
         dist = (distx**2+disty**2)**0.5
         if dist < self.sniffrange:
-            if random.random()< 0.01:
+            if random.random()< 0.08:
                 Bullet(self,"1") #0 silas #1 ferris
             if self.x > PygView.ferris.x:
                 self.dx = -self.speed
@@ -278,6 +338,9 @@ class EvilDoge (pygame.sprite.Sprite):
         self.y += self.dy * seconds
         
         self.rect.center = (self.x, self.y)
+        if self.hitpoints <1:
+            self.kill()    
+
                 
             
                     
@@ -670,11 +733,14 @@ class PygView(object):
         self.bargroup = pygame.sprite.Group()
         self.enemygroup = pygame.sprite.Group()
         self.playergroup = pygame.sprite.Group()
+        self.doenergroup = pygame.sprite.Group()
+        self.nonhostilegroup = pygame.sprite.Group()
         # only the allgroup draws the sprite, so i use LayeredUpdates() instead Group()
         self.allgroup = pygame.sprite.LayeredUpdates() # more sophisticated, can draw sprites in layers 
         FlyingObject.groups=self.allgroup,self.playergroup
         EvilSnowman.groups=self.allgroup,self.snowmangroup,self.enemygroup
         EvilDoge.groups=self.allgroup,self.dogegroup,self.enemygroup
+        Doenertier.groups=self.allgroup,self.doenergroup,self.nonhostilegroup
         Fragment.groups=self.allgroup,self.fragmentgroup
         Bullet.groups=self.allgroup,self.bulletgroup
         Lifebar.groups=self.allgroup,self.bargroup
@@ -820,7 +886,9 @@ class PygView(object):
                     elif event.key == pygame.K_v:
                         EvilSnowman()
                     elif event.key == pygame.K_b:
-                        EvilDoge()        
+                        EvilDoge()
+                    elif event.key == pygame.K_n:
+                        Doenertier()                    
                     #bullet
                     if event.key == pygame.K_SPACE:
                         Bullet(PygView.ferris,PygView.ferris.direction)             
@@ -858,13 +926,21 @@ class PygView(object):
                     p.hitpoints-=7
                     bu.kill()
                     
+            if self.ferris.hitpoints < 1:
+                break 
+            for p in self.playergroup: #detects when you take a bite off the delicous dönertier
+                crashgroup = pygame.sprite.spritecollide(p, self.doenergroup, False, pygame.sprite.collide_rect)
+                for do in crashgroup:
+                    p.hitpoints += 7.0
+                    do.hitpoints -= 3.0 
+                             
             for e in self.enemygroup:
                 crashgroup = pygame.sprite.spritecollide(e, self.bulletgroup, False, pygame.sprite.collide_rect)
-                for e in crashgroup:
-                    if e.boss == p:
+                for bu in crashgroup:
+                    if bu.boss == e:
                         continue
-                    p.hitpoints-=7
-                    e.kill()
+                    e.hitpoints-=7
+                    bu.kill()
                 
             
             
@@ -890,7 +966,9 @@ class PygView(object):
             pygame.display.flip()
             self.screen.blit(self.background, (0, 0))
             
+        sys.exit()    
         pygame.quit()
+        
 
 
 
