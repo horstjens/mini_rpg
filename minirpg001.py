@@ -150,6 +150,7 @@ class Lifebar(pygame.sprite.Sprite):
             self.rect = self.image.get_rect()
  
         def update(self, seconds):
+            self.room = self.boss.room
             self.percent = self.boss.hitpoints / self.boss.hitpointsfull * 1.0
             if self.percent != self.oldpercent:
                 self.paint() # important ! boss.rect.width may have changed (because rotating)
@@ -173,8 +174,9 @@ class Lifebar(pygame.sprite.Sprite):
 class Fragment(pygame.sprite.Sprite):
         """generic Fragment class. Inherits to blue Fragment (implosion),
            red Fragment (explosion), smoke (black) and shots (purple)"""
-        def __init__(self, x,y, layer = 9):
+        def __init__(self, x,y, room, layer = 9):
             self._layer = layer
+            self.room = room
             pygame.sprite.Sprite.__init__(self, self.groups)
             self.pos = [x,y]
             self.fragmentmaxspeed = 1500# try out other factors !
@@ -204,8 +206,9 @@ class Fragment(pygame.sprite.Sprite):
 
 class Doenertier (pygame.sprite.Sprite):
     """A yummy animal made out of pure döner and extra spicy, juicy chicken meat"""
-    def __init__(self):
+    def __init__(self, room):
         self._layer = 8
+        self.room = room
         pygame.sprite.Sprite.__init__(self, self.groups)
         self.hitpoints = 50.0
         self.hitpointsfull = 50
@@ -229,6 +232,7 @@ class Doenertier (pygame.sprite.Sprite):
         
     def update(self, seconds):
         #distance to player
+        #if 
         distx=self.x - PygView.ferris.x
         disty=self.y - PygView.ferris.y
         dist = (distx**2+disty**2)**0.5
@@ -261,7 +265,8 @@ class Doenertier (pygame.sprite.Sprite):
        
 class EvilSnowman (pygame.sprite.Sprite):
     """an evil snowman turret"""
-    def __init__(self):
+    def __init__(self, room):
+        self.room = room
         self._layer = 8
         pygame.sprite.Sprite.__init__(self, self.groups)
         self.hitpoints = 120.0
@@ -282,14 +287,15 @@ class EvilSnowman (pygame.sprite.Sprite):
         
     def update(self, seconds):
         if random.random()< 0.01:
-            Bullet(self,"1") #0 silas #1 ferris
+            Bullet(self,"1", room=self.room) #0 silas #1 ferris
         if self.hitpoints <1:
             self.kill()    
              
 class EvilDoge (pygame.sprite.Sprite):
     """an evil doge which follows you"""
-    def __init__(self):
+    def __init__(self, room):
         self._layer = 8
+        self.room = room
         pygame.sprite.Sprite.__init__(self, self.groups)
         self.hitpoints = 10.0
         self.hitpointsfull = random.randint(100.0,150.0)
@@ -319,7 +325,7 @@ class EvilDoge (pygame.sprite.Sprite):
         dist = (distx**2+disty**2)**0.5
         if dist < self.sniffrange:
             if random.random()< 0.08:
-                Bullet(self,"1") #0 silas #1 ferris
+                Bullet(self,"1", room=self.room) #0 silas #1 ferris
             if self.x > PygView.ferris.x:
                 self.dx = -self.speed
             elif self.x < PygView.ferris.x:
@@ -349,10 +355,11 @@ class EvilDoge (pygame.sprite.Sprite):
             
 class Bullet(pygame.sprite.Sprite):
     """A projectile"""
-    def __init__(self, boss ,direction):
+    def __init__(self, boss ,direction, room):
         self._layer = 9
+        self.room = room
         pygame.sprite.Sprite.__init__(self, self.groups)
-        
+        self.room = room
         self.direction = direction
         self.speed = 10 + random.random() *100
         self.boss = boss
@@ -409,38 +416,17 @@ class Bullet(pygame.sprite.Sprite):
             self.kill()
             
             
-
-class Ball(object):
-    """this is not a native pygame sprite but instead a pygame surface made by dirk ketturkat"""
-    def __init__(self, radius = 50, color=(0,0,255), x=320, y=240):
-        """create a (black) surface and paint a blue ball on it"""
-        self.radius = radius
-        self.color = color
-        self.x = x
-        self.y = y
-        # create a rectangular surface for the ball 50x50
-        self.surface = pygame.Surface((2*self.radius,2*self.radius))    
-        # pygame.draw.circle(Surface, color, pos, radius, width=0) # from pygame documentation
-        pygame.draw.circle(self.surface, color, (radius, radius), radius) # draw blue filled circle on ball surface
-        self.surface = self.surface.convert() # for faster blitting. 
-        # to avoid the black background, make black the transparent color:
-        # self.surface.set_colorkey((0,0,0))
-        # self.surface = self.surface.convert_alpha() # faster blitting with transparent color
-        
-    def blit(self, background):
-        """blit the Ball on the background"""
-        background.blit(self.surface, ( self.x, self.y))
-
 class PlayerSprite(pygame.sprite.Sprite):
         """generic Bird class, to be called from SmallBird and BigBird"""
         image=[]  # list of all images
         number = 0
         objects={}
         
-        def __init__(self, area, layer = 4,hitpoints=100,imagenr=0,grid=50,ai=0):
+        def __init__(self, area, layer = 4,hitpoints=100,imagenr=0,grid=50,ai=0, room=0):
             #self.groups = PygView.allgroup, PygView.gravitygroup # assign groups 
             self._layer = layer                   # assign level
             #self.layer = layer
+            self.room = room
             pygame.sprite.Sprite.__init__(self,  self.groups  ) #call parent class. NEVER FORGET !
             #self.area = PygView.screen.get_rect()
             self.area = area
@@ -518,9 +504,6 @@ class PlayerSprite(pygame.sprite.Sprite):
             self.automove = "down"       
       
         def kill(self):
-            # a shower of red fragments, exploding outward
-            #for _ in range(self.frags):
-            #    RedFragment(self.pos)
             PlayerSprite.objects.pop(self.number)
             pygame.sprite.Sprite.kill(self) # kill the actual Bird 
             
@@ -549,7 +532,6 @@ class PlayerSprite(pygame.sprite.Sprite):
                    
         def areacheck(self):
             if not self.area.contains(self.rect):
-                self.crashing = True # change colour later
                 # --- compare self.rect and area.rect
                 if self.x + self.rect.width/2 > self.area.right:
                     self.x = self.area.right - self.rect.width/2
@@ -560,35 +542,12 @@ class PlayerSprite(pygame.sprite.Sprite):
                 if self.y + self.rect.height/2 > self.area.bottom:
                     self.y = self.area.bottom - self.rect.height/2
                     self.dy *= -0.5 # bouncing off the ground
-                    #if reaching the bottom, the birds get a boost and fly upward to the sky
-                    #at the bottom the bird "refuel" a random amount of "fuel" (the boostime)
-                    #self.dy = 0 # break at the bottom
-                    #self.dx *= 0.3 # x speed is reduced at the ground
-                    #self.boosttime = self.boostmin + random.random()* (self.boostmax - self.boostmin)
                 if self.y - self.rect.height/2 < self.area.top:
                     self.y = self.area.top + self.rect.height/2
                     self.dy *= -0.5 # stop when reaching the sky
-                    #self.dy *= -1 
-                    #self.hitpoints -= 1 # reaching the sky cost 1 hitpoint
+                    
                     
         def update(self, seconds):
-            #---make Bird only visible after waiting time
-            #self.lifetime += seconds
-            #if self.lifetime > (self.waittime):
-            #    self.waiting = False
-            #if self.waiting:
-            #    self.rect.center = (-100,-100)
-            #else: # the waiting time (Blue Fragments) is over
-                #if self.boosttime > 0:   # boost flying upwards ?
-                #    self.boosttime -= seconds
-                #    self.dy -= self.boostspeed # upward is negative y !
-                #    self.ddx = -math.sin(self.angle*GRAD) 
-                #    self.ddy = -math.cos(self.angle*GRAD) 
-                #    Smoke(self.rect.center, -self.ddx , -self.ddy )
-           
-                #--- calculate actual image: crasing, bigbird, both, nothing ?
-               # self.image = Bird.image[self.crashing+self.big] # 0 for not crashing, 1 for crashing
-                #self.image0 = Bird.image[self.crashing+self.big] # 0 for not crashing, 1 for crashing
            keys=pygame.key.get_pressed()     
           
            self.ddx = 0.0
@@ -711,7 +670,8 @@ class PygView(object):
             for y in range(self.grid // 2, self.height, self.grid):
                 self.tiles[(x, y)] = True
         self.tiles[(self.grid//2 + 10*self.grid, self.grid//2 + 1*self.grid)] = False                 
-        self.tiles[(self.grid//2 + 10*self.grid, self.grid//2 + 2*self.grid)] = False                 
+        self.tiles[(self.grid//2 + 10*self.grid, self.grid//2 + 2*self.grid)] = False 
+        self.room = 0 # entspricht index von self.backgrounds                
 
         try: # ------- load sound -------
             self.crysound = pygame.mixer.Sound(os.path.join(self.folder,'claws.ogg'))  #load sound
@@ -725,8 +685,9 @@ class PygView(object):
         #-----------------define sprite groups------------------------
         #birdgroup = pygame.sprite.Group() 
         #bulletgroup = pygame.sprite.Group()
+        self.drawgroup = pygame.sprite.LayeredUpdates()
         self.fragmentgroup = pygame.sprite.Group()
-        self.gravitygroup = pygame.sprite.Group()
+        #self.gravitygroup = pygame.sprite.Group()
         self.bulletgroup = pygame.sprite.Group()
         self.snowmangroup = pygame.sprite.Group()
         self.dogegroup = pygame.sprite.Group()
@@ -737,13 +698,13 @@ class PygView(object):
         self.nonhostilegroup = pygame.sprite.Group()
         # only the allgroup draws the sprite, so i use LayeredUpdates() instead Group()
         self.allgroup = pygame.sprite.LayeredUpdates() # more sophisticated, can draw sprites in layers 
-        PlayerSprite.groups=self.allgroup,self.playergroup
-        EvilSnowman.groups=self.allgroup,self.snowmangroup,self.enemygroup
-        EvilDoge.groups=self.allgroup,self.dogegroup,self.enemygroup
-        Doenertier.groups=self.allgroup,self.doenergroup,self.nonhostilegroup
-        Fragment.groups=self.allgroup,self.fragmentgroup
-        Bullet.groups=self.allgroup,self.bulletgroup
-        Lifebar.groups=self.allgroup,self.bargroup
+        PlayerSprite.groups=self.allgroup,self.playergroup, self.drawgroup
+        EvilSnowman.groups=self.allgroup,self.snowmangroup,self.enemygroup, self.drawgroup
+        EvilDoge.groups=self.allgroup,self.dogegroup,self.enemygroup, self.drawgroup
+        Doenertier.groups=self.allgroup,self.doenergroup,self.nonhostilegroup, self.drawgroup
+        Fragment.groups=self.allgroup,self.fragmentgroup, self.drawgroup
+        Bullet.groups=self.allgroup,self.bulletgroup, self.drawgroup
+        Lifebar.groups=self.allgroup,self.bargroup, self.drawgroup
 
         #-------------loading files from data subdirectory -------------------------------
         try: # load images into classes (class variable !). if not possible, draw ugly images
@@ -757,31 +718,34 @@ class PygView(object):
         self.silas=PlayerSprite(self.screen.get_rect(),imagenr=1)
         PygView.ferris=PlayerSprite(self.screen.get_rect(),imagenr=0)
         Lifebar(PygView.ferris)
-        #self.ketturkat=PlayerSprite(self.screen.get_rect(),imagenr=0,ai=1)
-        #self.ketturkat.x=425
-        #self.ketturkat.y=225
-        self.background=self.bg1
+        
+        self.backgrounds = [self.bg1, self.bg2]
+        self.background = self.bg1
 
     def paint(self):
         """painting on the surface"""
         
-        #------- try out some pygame draw functions --------
-        # pygame.draw.rect(Surface, color, Rect, width=0): return Rect
-        pygame.draw.rect(self.background, (0,255,0), (50,50,100,25)) # rect: (x1, y1, width, height)
-        # pygame.draw.circle(Surface, color, pos, radius, width=0): return Rect
-        pygame.draw.circle(self.background, (0,200,0), (200,50), 35)
-        # pygame.draw.polygon(Surface, color, pointlist, width=0): return Rect
-        pygame.draw.polygon(self.background, (0,180,0), ((250,100),(300,0),(350,50)))
-        # pygame.draw.arc(Surface, color, Rect, start_angle, stop_angle, width=1): return Rect
-        pygame.draw.arc(self.background, (0,150,0),(400,10,150,100), 0, 3.14) # radiant instead of grad
-        # ------------------- blitting a Ball --------------
+        
+        self.background = self.backgrounds[self.room]
+        if self.room == 0:
+            #------- try out some pygame draw functions --------
+            # pygame.draw.rect(Surface, color, Rect, width=0): return Rect
+            pygame.draw.rect(self.background, (0,255,0), (50,50,100,25)) # rect: (x1, y1, width, height)
+            # pygame.draw.circle(Surface, color, pos, radius, width=0): return Rect
+            pygame.draw.circle(self.background, (0,200,0), (200,50), 35)
+        elif self.room == 1:
+            # pygame.draw.polygon(Surface, color, pointlist, width=0): return Rect
+            pygame.draw.polygon(self.background, (0,180,0), ((250,100),(300,0),(350,50)))
+            # pygame.draw.arc(Surface, color, Rect, start_angle, stop_angle, width=1): return Rect
+            pygame.draw.arc(self.background, (0,150,0),(400,10,150,100), 0, 3.14) # radiant instead of grad
+        
+        
+        # ------------------- make grid -------------
         for x in range(0,self.width,self.grid):
             pygame.draw.line(self.background, (0,255,35), (x,0),(x,self.height))
         for y in range(0,self.height,self.grid):
             pygame.draw.line(self.background, (0,255,35), (0,y),(self.width,y))
-        myball = Ball() # creating the Ball object
-        myball.blit(self.background) # blitting it
-    
+        
     
     def tilecheck(self,x,y):
         try:
@@ -825,21 +789,18 @@ class PygView(object):
                     elif event.key == pygame.K_LEFT:
                         PygView.ferris.direction = "left"
                         if self.tilecheck(int(PygView.ferris.x)-self.grid, int(PygView.ferris.y)):
-                        #if self.tiles[(int(PygView.ferris.x)-self.grid, int(PygView.ferris.y))]:
-                            #print(PygView.ferris.x)
+                        
                             if self.background == self.bg2 and (PygView.ferris.x - self.grid ) <= self.grid//2:
-                                self.background = self.bg1
+                                self.room = 0
+                                
+                                #self.background = self.bg1
                                 self.paint()
-                                PygView.ferris.x = self.grid * self.gridmaxx - self.grid//2       
+                                PygView.ferris.x = self.grid * self.gridmaxx - self.grid//2  
+                                PygView.ferris.room = 0     
                             else:
                                 PygView.ferris.left()
                                 self.silas.x=PygView.ferris.oldx
-                                self.silas.y=PygView.ferris.oldy
-                            #if self.background == self.bg2 and PygView.ferris.x < self.width * 0.01:
-                            #if self.background == self.bg2 and PygView.ferris.x < 0:
-                            #    self.background = self.bg1
-                            #    self.paint()
-                            #    PygView.ferris.x = self.width        
+                                self.silas.y=PygView.ferris.oldy       
                     elif event.key == pygame.K_RIGHT:
                         PygView.ferris.direction = "right"
                         #print(PygView.ferris.x, PygView.ferris.y, self.tiles.keys())
@@ -848,22 +809,17 @@ class PygView(object):
                         if self.tilecheck(int(PygView.ferris.x)+self.grid, int(PygView.ferris.y)):
                         #if self.tiles[(int(PygView.ferris.x)+self.grid, int(PygView.ferris.y))]:
                             if self.background == self.bg1 and PygView.ferris.x + self.grid >= self.grid * self.gridmaxx - self.grid//2:
-                                self.background = self.bg2
+                                #self.background = self.bg2
+                                self.room = 1
                                 self.paint()
                                 PygView.ferris.x = 0
+                                PygView.ferris.room = 1
                             
                             else:
                                 PygView.ferris.right()
                                 self.silas.x=PygView.ferris.oldx
                                 self.silas.y=PygView.ferris.oldy
-                          #  if self.background == self.bg1 and PygView.ferris.x > self.width * 0.99:
-                          #  if self.background == self.bg1 and PygView.ferris.x >self.width:
-                                
-                    #if event.key == pygame.K_0:
-                    #    PygView.ferris.dx=0
-                    #    PygView.ferris.dy=0    
-                    #    PygView.ferris.ddx=0
-                    #    PygView.ferris.ddy=0    
+  
                     if event.key == pygame.K_i:
                         self.silas.up()
                     if event.key == pygame.K_k:
@@ -882,42 +838,25 @@ class PygView(object):
                         self.silas.x=(random.randint(0,640))
                         self.silas.y=(random.randint(0,640)) 
                     elif event.key == pygame.K_g:
-                        Fragment(self.silas.x,self.silas.y)
+                        Fragment(self.silas.x,self.silas.y, room=self.room)
                     elif event.key == pygame.K_v:
-                        EvilSnowman()
+                        EvilSnowman(room=self.room)
                     elif event.key == pygame.K_b:
-                        EvilDoge()
+                        EvilDoge(room=self.room)
                     elif event.key == pygame.K_n:                        
-                        Doenertier()
+                        Doenertier(room=self.room)
                     elif event.key == pygame.K_x:
                         for wave in range(4):
-                           # self.ferris.x = PygView.width /2
-                           # self.ferris.y = PygView.height /2
-                            Doenertier()
-                            EvilDoge()
-                            EvilDoge()
-                            EvilSnowman()                        
+                            Doenertier(room=self.room)
+                            EvilDoge(room=self.room)
+                            EvilDoge(room=self.room)
+                            EvilSnowman(room=self.room)                        
                                                    
-                    #bullet
+                    #fire bullets
                     if event.key == pygame.K_SPACE:
-                        Bullet(PygView.ferris,PygView.ferris.direction)             
+                        Bullet(PygView.ferris,PygView.ferris.direction, room=self.room)             
             keys=pygame.key.get_pressed()
-            #if keys[pygame.K_a]:
-            #    self.silas.dx -= 1
-            #if keys[pygame.K_d]:
-            #    self.silas.dx += 1                   
-            #if keys[pygame.K_w]:
-            #    self.silas.dy -= 1
-            #if keys[pygame.K_s]:
-            #    self.silas.dy += 1                   
-            #if keys[pygame.K_KP4]:
-            #    PygView.ferris.dx -= 1
-            #if keys[pygame.K_KP6]:
-            #    PygView.ferris.dx += 1                   
-            #if keys[pygame.K_KP8]:
-            #    PygView.ferris.dy -= 1
-            #if keys[pygame.K_KP2]:
-            #    PygView.ferris.dy += 1 
+
             
             milliseconds = self.clock.tick(self.fps)
             seconds = milliseconds / 1000.0 # seconds passed since last frame
@@ -957,21 +896,30 @@ class PygView(object):
              
             # ferrris screenwechsel
             if self.background == self.bg1 and PygView.ferris.x > self.width * 0.9 and PygView.ferris.dx > 0:
-                self.background = self.bg2
+                #self.background = self.bg2
+                self.room = 1
                 self.paint()
                 PygView.ferris.x = self.grid // 2
+                PygView.ferris.room = 1
                 
             if self.background == self.bg2 and PygView.ferris.x < self.width * 0.1 and PygView.ferris.dx < 0:
-                self.background = self.bg1
+                #self.background = self.bg1
+                self.room = 0
                 self.paint()
                 PygView.ferris.x =  self.width // self.grid * self.grid - self.grid//2
+                PygView.ferris.room = 0
            
            
            
            
             #self.allgroup.clear(self.screen, self.background)
             self.allgroup.update(seconds)
-            self.allgroup.draw(self.screen) 
+            #self.allgroup.draw(self.screen) 
+            self.drawgroup = self.allgroup.copy()
+            for s in self.drawgroup:
+                if s.room != self.room:
+                    self.drawgroup.remove(s)
+            self.drawgroup.draw(self.screen)
             pygame.display.flip()
             self.screen.blit(self.background, (0, 0))
             
@@ -989,5 +937,5 @@ if __name__ == '__main__':
     # call with width of window and fps
     for line in showkeys():
         print(line)
-    i=raw_input("press enter")
+    #i=raw_input("press enter")
     PygView().run()
