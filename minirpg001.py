@@ -130,7 +130,7 @@ class Text(pygame.sprite.Sprite):
 class Lifebar(pygame.sprite.Sprite):
         """shows a bar with the hitpoints of a sprite with a given bossnumber, the Lifebar class can 
            identify the BOSS (FLYING OBJECT sprite) with this codeline:
-           FlyingObject.objects[bossnumber] """
+           PlayerSprite.objects[bossnumber] """
            
         def __init__(self, boss):
             #self.groups = PygView.allgroup
@@ -222,7 +222,7 @@ class Doenertier (pygame.sprite.Sprite):
         self.sniffrange = 80
         self.dx = 0
         self.dy = 0
-        self.speed = 27
+        self.speed = 20
         Lifebar(self)        
         
         
@@ -380,7 +380,7 @@ class Bullet(pygame.sprite.Sprite):
             self.targetnr = int(direction)
             #self.dx=random.random()*self.speed
             #self.dy=random.random()*self.speed
-            self.target = FlyingObject.objects[self.targetnr] 
+            self.target = PlayerSprite.objects[self.targetnr] 
             self.ix = self.target.x - self.x
             self.iy = self.target.y - self.y
             self.angle = radians_to_degrees(math.atan2(self.iy, -self.ix))+90
@@ -431,13 +431,13 @@ class Ball(object):
         """blit the Ball on the background"""
         background.blit(self.surface, ( self.x, self.y))
 
-class FlyingObject(pygame.sprite.Sprite):
+class PlayerSprite(pygame.sprite.Sprite):
         """generic Bird class, to be called from SmallBird and BigBird"""
         image=[]  # list of all images
         number = 0
         objects={}
         
-        def __init__(self, area, layer = 4,hitpoints=100,imagenr=0,grid=50,gridmaxx=13,gridmaxy=8,ai=0):
+        def __init__(self, area, layer = 4,hitpoints=100,imagenr=0,grid=50,ai=0):
             #self.groups = PygView.allgroup, PygView.gravitygroup # assign groups 
             self._layer = layer                   # assign level
             #self.layer = layer
@@ -457,13 +457,13 @@ class FlyingObject(pygame.sprite.Sprite):
             self.oldy = 0
             self.automove = ""
             self.direction = "right"
-            self.gridmaxx=gridmaxx
-            self.gridmaxy=gridmaxy
             self.grid=grid
+            self.gridmaxx=self.area.width //grid
+            self.gridmaxy=self.area.height //grid
             self.ddx = 0.0
             self.ddy = 0.0
-            self.image = FlyingObject.image[imagenr]
-            self.image0 = FlyingObject.image[imagenr]
+            self.image = PlayerSprite.image[imagenr]
+            self.image0 = PlayerSprite.image[imagenr]
             self.hitpoints = float(hitpoints) # actual hitpoints
             self.hitpointsfull = float(hitpoints) # maximal hitpoints
             self.rect = self.image.get_rect()
@@ -474,9 +474,9 @@ class FlyingObject(pygame.sprite.Sprite):
             #self.lifetime = 0.0
             self.rect.center = (-100,-100) # out of visible screen
             self.frags = 125 # number of framgents if Bird is killed
-            self.number = FlyingObject.number # get my personal Birdnumber
-            FlyingObject.number+= 1           # increase the number for next Bird
-            FlyingObject.objects[self.number] = self # store myself into the Bird dictionary
+            self.number = PlayerSprite.number # get my personal Birdnumber
+            PlayerSprite.number+= 1           # increase the number for next Bird
+            PlayerSprite.objects[self.number] = self # store myself into the Bird dictionary
             #print("my number %i Bird number %i and i am a %s " % (self.number, Bird.number, getclassname(self)))
             #-------------------physic------------------
             self.mass = 100.0
@@ -521,7 +521,7 @@ class FlyingObject(pygame.sprite.Sprite):
             # a shower of red fragments, exploding outward
             #for _ in range(self.frags):
             #    RedFragment(self.pos)
-            FlyingObject.objects.pop(self.number)
+            PlayerSprite.objects.pop(self.number)
             pygame.sprite.Sprite.kill(self) # kill the actual Bird 
             
         def speedcheck(self):
@@ -737,7 +737,7 @@ class PygView(object):
         self.nonhostilegroup = pygame.sprite.Group()
         # only the allgroup draws the sprite, so i use LayeredUpdates() instead Group()
         self.allgroup = pygame.sprite.LayeredUpdates() # more sophisticated, can draw sprites in layers 
-        FlyingObject.groups=self.allgroup,self.playergroup
+        PlayerSprite.groups=self.allgroup,self.playergroup
         EvilSnowman.groups=self.allgroup,self.snowmangroup,self.enemygroup
         EvilDoge.groups=self.allgroup,self.dogegroup,self.enemygroup
         Doenertier.groups=self.allgroup,self.doenergroup,self.nonhostilegroup
@@ -747,17 +747,17 @@ class PygView(object):
 
         #-------------loading files from data subdirectory -------------------------------
         try: # load images into classes (class variable !). if not possible, draw ugly images
-            FlyingObject.image.append(pygame.image.load(os.path.join(self.folder,"babytux.png")))
-            FlyingObject.image.append(pygame.image.load(os.path.join(self.folder,"babytux_neg.png")))
+            PlayerSprite.image.append(pygame.image.load(os.path.join(self.folder,"babytux.png")))
+            PlayerSprite.image.append(pygame.image.load(os.path.join(self.folder,"babytux_neg.png")))
             self.bg1=pygame.image.load(os.path.join("data","background2.jpg"))
             self.bg2=pygame.image.load(os.path.join("data","background.jpg"))
         except:
             print("no image files 'babytux.png' and 'babytux_neg.png' in subfolder %s" % folder)
             print("therfore drawing incredibly ugly sprites instead")
-        self.silas=FlyingObject(self.screen.get_rect(),imagenr=1)
-        PygView.ferris=FlyingObject(self.screen.get_rect(),imagenr=0)
+        self.silas=PlayerSprite(self.screen.get_rect(),imagenr=1)
+        PygView.ferris=PlayerSprite(self.screen.get_rect(),imagenr=0)
         Lifebar(PygView.ferris)
-        #self.ketturkat=FlyingObject(self.screen.get_rect(),imagenr=0,ai=1)
+        #self.ketturkat=PlayerSprite(self.screen.get_rect(),imagenr=0,ai=1)
         #self.ketturkat.x=425
         #self.ketturkat.y=225
         self.background=self.bg1
@@ -887,8 +887,17 @@ class PygView(object):
                         EvilSnowman()
                     elif event.key == pygame.K_b:
                         EvilDoge()
-                    elif event.key == pygame.K_n:
-                        Doenertier()                    
+                    elif event.key == pygame.K_n:                        
+                        Doenertier()
+                    elif event.key == pygame.K_x:
+                        for wave in range(4):
+                           # self.ferris.x = PygView.width /2
+                           # self.ferris.y = PygView.height /2
+                            Doenertier()
+                            EvilDoge()
+                            EvilDoge()
+                            EvilSnowman()                        
+                                                   
                     #bullet
                     if event.key == pygame.K_SPACE:
                         Bullet(PygView.ferris,PygView.ferris.direction)             
@@ -966,9 +975,9 @@ class PygView(object):
             pygame.display.flip()
             self.screen.blit(self.background, (0, 0))
             
-        sys.exit()    
-        pygame.quit()
-        
+        #sys.exit()    
+        #pygame.quit()
+        return
 
 
 
